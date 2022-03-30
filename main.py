@@ -1,6 +1,4 @@
-import csv
 import os.path
-
 import requests
 from bs4 import BeautifulSoup
 
@@ -13,6 +11,7 @@ if not os.path.exists(category_path):
     os.makedirs(category_path)
 
 url_category = "http://books.toscrape.com/catalogue/category/books/"
+url_index = "http://books.toscrape.com/index.html"
 
 
 def scrap_book_data(book, category_name):
@@ -20,8 +19,6 @@ def scrap_book_data(book, category_name):
     url_book = "http://books.toscrape.com/catalogue/"+book
     page_book = requests.get(url_book)
     soup_book = BeautifulSoup(page_book.content, 'html.parser')
-
-    info_td = soup_book.find_all(["td"])
 
     book = {
         "title": "",
@@ -37,6 +34,7 @@ def scrap_book_data(book, category_name):
     }
 
     data = []
+    info_td = soup_book.find_all(["td"])
     for line in info_td:
         data.append(line.get_text("td"))
 
@@ -45,26 +43,26 @@ def scrap_book_data(book, category_name):
     book["price_including_tax"] = data[3]
     book["availability"] = data[5]
 
-    book["title"] = soup_book.find('h1').text
+    book["title"] = soup_book.find('h1').text.replace("/", ",")
     book["product_page_url"] = url_book
-    book["product_description"] = soup_book.select("p")[3].text
+    book["product_description"] = soup_book.select("p")[3].text.replace(";", ",")
     book["category"] = category_name
-    book["rating"] = soup_book.find('p', class_='star-rating').get('class')[1] + '/5'
+    book["rating"] = soup_book.find('p', class_='star-rating').get('class')[1] + '/Five'
     cover_page = soup_book.select('img')[0]
     book["cover_page_url"] = "http://books.toscrape.com/"+cover_page.get('src').lstrip('../')
 
     book_csv_line = book["product_page_url"] + ";" + \
                     book["upc"] + ";" + \
-                    book["title"] + "';'" + \
+                    book["title"] + ";" + \
                     book["price_including_tax"] + ";" + \
                     book["price_excluding_tax"] + ";" + \
                     book["availability"] + ";" + \
                     book["product_description"] + ";" + \
+                    book["category"] + ";" + \
                     book["rating"] + ";" + \
                     book["cover_page_url"] + ";"
 
-
-    with open (image_path+'/'+book["title"]+".jpg", "wb") as file:
+    with open(image_path+'/'+book["title"]+".jpg", "wb") as file:
         image = requests.get(book["cover_page_url"])
         file.write(image.content)
 
@@ -74,7 +72,7 @@ def scrap_book_data(book, category_name):
 
 
 def category_page(category_name, page):
-    page = requests.get(url_category+category_name+'/page-'+page+'/index.html')
+    page = requests.get(url_category+category_name+'/page-'+page+'.html')
     soup = BeautifulSoup(page.content, 'html.parser')
 
     for book in soup.find_all("h3"):
@@ -87,14 +85,16 @@ def category_index(category_name):
     page = requests.get(url_category+category_name+'/index.html')
     soup = BeautifulSoup(page.content, 'html.parser')
 
+    heading = "product_page_url; upc; title; price_including_tax; price_excluding_tax; availability; product_description; category; rating; cover_page_url"
+    with open(category_path+'/'+category_name+".csv", "w") as file:
+        file.write(heading + "\n")
+
+        print(category_name)
+
     for livre in soup.find_all("h3"):
         for link in livre.find_all('a'):
             scrap_book_data(link.get('href').lstrip("../"), category_name)
     pagination = soup.find(class_="current")
-
-    heading = "product_page_url; upc; title; price_including_tax; price_excluding_tax; availability; product_description; category; rating; cover_page_url"
-    with open(category_path+'/'+category_name+".csv", 'w') as file:
-        file.write(heading + "\n")
 
     if pagination:
         pagination = str(pagination)
@@ -104,8 +104,8 @@ def category_index(category_name):
             category_page(category_name, str(i))
     return
 
-url = "http://books.toscrape.com/index.html"
-page = requests.get(url)
+
+page = requests.get(url_index)
 soup = BeautifulSoup(page.content, 'html.parser')
 getFirstUL = soup.find('ul', {"class": "nav-list"})
 getUL = getFirstUL.find('ul')
