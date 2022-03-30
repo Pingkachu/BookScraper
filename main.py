@@ -89,8 +89,6 @@ def category_index(category_name):
     with open(category_path+'/'+category_name+".csv", "w") as file:
         file.write(heading + "\n")
 
-        print(category_name)
-
     for livre in soup.find_all("h3"):
         for link in livre.find_all('a'):
             scrap_book_data(link.get('href').lstrip("../"), category_name)
