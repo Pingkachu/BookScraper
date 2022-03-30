@@ -1,4 +1,4 @@
-#Open a Terminal
+# Open a Terminal
 
 WINDOWS :
 
