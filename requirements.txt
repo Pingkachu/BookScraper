@@ -1,5 +1,4 @@
 #Requirements
 beautifulsoup4
-os.path
+path
 requests
-python>=3.10.2
